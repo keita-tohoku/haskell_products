@@ -20,9 +20,6 @@ data Block = Block { lives :: Int,
 
 type Blocks = [Block]
 
-data Blocks' = Blocks' { nth :: Int, blos :: Blocks }
-
-
 data State = State { block :: Blocks,
                      ball :: Ball,
                      life :: Int }
@@ -61,15 +58,25 @@ initWorld = State { block = blockMaker,
                     ball = Ball { bax = 0,
                                   bay = (-250),
                                   ver = (0,0) },
-                    life = 5}
+                    life = 10}
 
 blockMaker :: Blocks
-blockMaker = [Block {lives = 3,
-                     blx = 100,
-                     bly = 175},
+blockMaker = [Block {lives = 4,
+                     blx =   0,
+                     bly =  50},
 	      Block {lives = 5,
- 	      	     blx = -45,
-		     bly = 45}]
+ 	      	     blx =  75,
+		     bly = 100},
+	      Block {lives = 2,
+	      	     blx = 100,
+		     bly =  25},
+	      Block {lives = 4,
+	      	     blx = -100,
+		     bly = 175},
+              Block {lives = 3,
+	      	     blx = -25,
+		     bly = 175}]
+		     
 --  let n = getStdRandom $ randomR (0,5)
 --  in blockmake n
 
@@ -88,7 +95,11 @@ blockMaker = [Block {lives = 3,
                 
 
 drawWorld :: State -> Picture
-drawWorld s = pictures (drawEmptyBox : ((drawBall (ball s)) : [drawBlock bl | bl <- block s]))
+drawWorld s = pictures ((drawLives s) : drawEmptyBox : ((drawBall (ball s)) : [drawBlock bl | bl <- block s]))
+
+
+drawLives :: State -> Picture
+drawLives s = color black $ translate (-170) (254) $ scale 0.2 0.2 $ color black $ text ("Your Life is " ++ (show (life s))) 
 
 drawEmptyBox :: Picture
 drawEmptyBox = color black $ line[(-175,-250),(175,-250),(175,250),(-175,250),(-175,-250)]
@@ -131,7 +142,7 @@ eventHandler (EventKey (MouseButton LeftButton) Up _ (mx,my) ) s@State{block = b
             ball = Ball{ bax = bx,
                          bay = -250,
                          ver = newver },
-            life = l}
+            life = (l-1)}
 eventHandler _ s = s
 
 isBlockHit :: State -> Bool
@@ -188,9 +199,22 @@ new_ball n b blos =
 	by = bay b
 	blox = blx blo
 	bloy = bly blo
-	(vx,vy) = ver b 
-    in if (bx > blox - 25) && (bx < blox + 25) then b { ver = (vx,-vy) }
-       else b { ver = (-vx,vy) }
+	(vx,vy) = ver b
+    in if  (by > bloy - 27) && (by < bloy - 23) then b { ver = (vx,-vy), bay = by - 2.0 }
+       else if (by < bloy + 27) && (by > bloy + 23) then b { ver = (vx,-vy), bay = by + 2.0 }
+       else if (bx > blox - 27) && (bx < blox - 23) then b { ver = (-vx,vy), bax = bx - 2.0 }
+       else if (bx < blox + 27) && (bx > blox + 23) then b { ver = (-vx,vy), bax = bx + 2.0 }
+       else b
+
+
+
+
+{-   in if (bx > blox - 25) && (bx < blox + 25) && (by == bloy - 25) then b { ver = (vx,-vy), bay = by - 1.0 }
+       else if (bx > blox - 25) && (bx < blox + 25) && (by == bloy + 25) then b { ver = (vx,-vy), bay = by + 1.0 }
+       else if (by > bloy - 25) && (by < bloy + 25) && (bx == blox - 25) then b { ver = (-vx,vy), bax = bx - 1.0 }
+       else if (by > bloy - 25) && (by < bloy + 25) && (bx == blox + 25) then b { ver = (-vx,vy), bax = bx + 1.0 }
+       else b
+-}
 
 blocheck :: Blocks -> Float -> Float -> Int
 blocheck (blo:res) bx by =
