@@ -111,7 +111,7 @@ hangman n =
 
 eventHandler :: Event -> HangmanState -> HangmanState
 eventHandler (EventKey (Char k) Down _ (mx,my)) state =
-	     	   	  if checkInputChar (toUpper k)
+	     	   	  if checkInputChar (toUpper k) && (life state) > -1
 	     		  then updateHangmanState (toUpper k) state
 	    		   else state
 eventHandler _ state = state

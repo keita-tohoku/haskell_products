@@ -11,9 +11,6 @@ data Ball = Ball { bax :: Float,
                    bay :: Float,
                    ver :: Point }
 
-type BoxPos = Int
-type BoxPoint = (BoxPos , BoxPos)
-
 data Block = Block { lives :: Int,
                      blx :: Float,
                      bly :: Float }
@@ -24,41 +21,13 @@ data State = State { block :: Blocks,
                      ball :: Ball,
                      life :: Int }
 
-
-leftEdge = 0 :: BoxPos
-rightEdge = 9 :: BoxPos
-bottomEdge = 0 :: BoxPos
-topEdge = 12 :: BoxPos
-
-boxWidthWorld = 10.0 :: Float
-boxHeightWorld = 5.0 :: Float
-
-boxWH = boxWidthWorld / 2
-boxHH = boxHeightWorld / 2
-
-boxToWorld :: BoxPoint -> Point
-boxToWorld (x,y) = ( fromIntegral x * boxWidthWorld-50,
-                     fromIntegral y * boxHeightWorld+boxWH )
-
-okPoint :: BoxPoint -> Bool
-okPoint (x,y) = and [ x >= leftEdge, x <= rightEdge,
-                      y >= bottomEdge , y <= topEdge ]
-
-pointAddClap :: BoxPoint -> BoxPoint -> BoxPoint
-pointAddClap (x1,y1) (x2,y2) = ( clap leftEdge rightEdge (x1 + x2),
-                                 clap bottomEdge rightEdge (y1 + y2) )
-                               where
-                                 clap min max n
-                                   | n < min = min
-                                   | n > max = max
-                                   | otherwise = n
-                                                 
 initWorld :: State
 initWorld = State { block = blockMaker,
                     ball = Ball { bax = 0,
                                   bay = (-250),
                                   ver = (0,0) },
                     life = 10}
+
 
 blockMaker :: Blocks
 blockMaker = [Block {lives = 4,
@@ -75,46 +44,37 @@ blockMaker = [Block {lives = 4,
 		     bly = 175},
               Block {lives = 3,
 	      	     blx = -25,
-		     bly = 175}]
-		     
---  let n = getStdRandom $ randomR (0,5)
---  in blockmake n
+		     bly = 175},
+	      Block {lives = 2,
+	             blx = -75,
+		     bly = -25}]
 
---blockmake :: Int -> [Block]
---blockmake 0 = []
---blockmake n = (Block { lives = randomR (0,3) 1,
-                      --blx = 10.0 * (fromIntegral (randomR ((-2),2) 1)),
-                      --bly = 10.0  }) : blockmake (n-1)
-
---blockcheck :: Blocks -> Blocks
---blockcheck [] = []
--- blockcheck (bl:bl') = (bl : blockcheck (filter (check bl) bl'))
-
--- check :: Block -> Block -> Bool
--- check bl1 bl2 = blx bl1 /= blx bl2 
-                
 
 drawWorld :: State -> Picture
-drawWorld s = pictures ((drawLives s) : drawEmptyBox : ((drawBall (ball s)) : [drawBlock bl | bl <- block s]))
+drawWorld s@State{block = [], ball = Ball{ bax = bx,bay = -250, ver = v},life = l} =  gameclear
+drawWorld s@State{block = blos, ball = Ball{ bax = bx,bay = -250, ver = (0,0)},life = 0} =  gameover
+drawWorld s = pictures ((drawLives s) : drawEmptyBox : ((drawBall (ball s)) : [drawBlock bl | bl <- block s])) 
+
+
+gameclear :: Picture
+gameclear = color black $ translate (-175) (-25) $ scale 0.5 0.5 $ text ("Game Clear!")
+
+
+gameover :: Picture
+gameover = color black $ translate (-175) (-25) $ scale 0.5 0.5 $ text ("Game Over...")
 
 
 drawLives :: State -> Picture
-drawLives s = color black $ translate (-170) (254) $ scale 0.2 0.2 $ color black $ text ("Your Life is " ++ (show (life s))) 
+drawLives s = translate (-170) (254) $ scale 0.2 0.2 $ color black $ text ("Your Life is " ++ (show (life s))) 
+
 
 drawEmptyBox :: Picture
 drawEmptyBox = color black $ line[(-175,-250),(175,-250),(175,250),(-175,250),(-175,-250)]
 
-{-
-drawEmptyBox = translate 0 (-250) $ scale 5 5 $ line [(fst ul - boxWH,snd ul + boxWH),(fst bl - boxWH,snd bl - boxWH),
-                     (fst br + boxWH,snd br - boxWH),(fst ur + boxWH,snd ur + boxWH),(fst ul - boxWH,snd ul + boxWH) ]
-  where ul = boxToWorld (leftEdge,topEdge)
-        ur = boxToWorld (rightEdge,topEdge)
-        bl = boxToWorld (leftEdge,bottomEdge)
-        br = boxToWorld (rightEdge,bottomEdge)
--}
 
 drawBall :: Ball -> Picture
 drawBall ball = translate (bax ball) (bay ball) $ color red $  circleSolid 5
+
 
 drawBlock :: Block -> Picture
 drawBlock blo  =
@@ -127,13 +87,21 @@ drawBlock blo  =
       else if l == 2 then translate bx by $ color orange $ rectangleSolid 50 50
       else translate bx by $ color red $ rectangleSolid 50 50
 
+
 verAbs = 200
 mycos :: Point -> Point -> Float
 mycos (x1,y1) (x2,y2) = (x2 - x1) / sqrt ((x2-x1)^2 + (y2-y1)^2)
 mysin :: Point -> Point -> Float
 mysin (x1,y1) (x2,y2) = (y2 - y1) / sqrt ((x2-x1)^2 + (y2-y1)^2)
 
+
 eventHandler :: Event -> State -> State
+eventHandler (EventKey (MouseButton LeftButton) Up _ (mx,my) ) s@State{block = blos, ball = Ball{ bax = bx,bay = -250, ver = v},life = 0} = State{ block = blos,
+            ball = Ball{ bax = bx,
+                         bay = -250,
+                         ver = (0,0) },
+            life = 0}
+eventHandler (EventKey (MouseButton LeftButton) Up _ (mx,my) ) s@State{block = [], ball = Ball{ bax = bx,bay = -250, ver = v},life = l} = s
 eventHandler (EventKey (MouseButton LeftButton) Up _ (mx,my) ) s@State{block = blos, ball = Ball{ bax = bx,bay = -250, ver = v},life = l} =
  let verx = (mycos (bx,(-250)) (mx,my)) * verAbs
      very = (mysin (bx,(-250)) (mx,my)) * verAbs
@@ -144,6 +112,7 @@ eventHandler (EventKey (MouseButton LeftButton) Up _ (mx,my) ) s@State{block = b
                          ver = newver },
             life = (l-1)}
 eventHandler _ s = s
+
 
 isBlockHit :: State -> Bool
 isBlockHit s =
@@ -158,6 +127,7 @@ bbcheck bx by blo =
     let blox = blx blo
     	bloy = bly blo
     in (blox -25) <= bx && (blox + 25) >= bx && (bloy - 25) <= by && (bloy + 25) >= by 
+
 
 updateBalls :: State -> (Ball -> Ball) -> State
 updateBalls s f =
@@ -175,6 +145,7 @@ updateBalls s f =
        else if by < (-251) then  s { ball = f (b{bay = (-250),ver = (0,0)})}
        else  s { ball = f b}
 
+
 boundState :: State -> State
 boundState s =
     let blos = block s
@@ -185,12 +156,14 @@ boundState s =
 	hit_blo = blos !! (n - 1)
     in s { block = new_blos (n-1) blos, ball = new_ball (n-1) b blos}
 
+
 new_blos :: Int -> Blocks -> Blocks
 new_blos n (blo:res) = if n == 0 then let l = lives blo
 					  b = blo { lives = l - 1 }
 	   	       	       	      in if l - 1 == 0 then res
 				         else b : res
 		       else blo : (new_blos (n-1) res)
+
 
 new_ball :: Int -> Ball -> Blocks -> Ball
 new_ball n b blos =
@@ -200,21 +173,12 @@ new_ball n b blos =
 	blox = blx blo
 	bloy = bly blo
 	(vx,vy) = ver b
-    in if  (by > bloy - 27) && (by < bloy - 23) then b { ver = (vx,-vy), bay = by - 2.0 }
-       else if (by < bloy + 27) && (by > bloy + 23) then b { ver = (vx,-vy), bay = by + 2.0 }
-       else if (bx > blox - 27) && (bx < blox - 23) then b { ver = (-vx,vy), bax = bx - 2.0 }
-       else if (bx < blox + 27) && (bx > blox + 23) then b { ver = (-vx,vy), bax = bx + 2.0 }
+    in if  (by > bloy - 25) && (by < bloy - 20) then b { ver = (vx,-vy), bay = by - (by - (bloy - 25))*2 }
+       else if (by < bloy + 25) && (by > bloy + 20) then b { ver = (vx,-vy), bay = by + (bloy + 25 - by) * 2 }
+       else if (bx > blox - 25) && (bx < blox - 20) then b { ver = (-vx,vy), bax = bx - (bx - (blox - 25))*2 }
+       else if (bx < blox + 25) && (bx > blox + 20) then b { ver = (-vx,vy), bax = bx + ((blox + 25) - bx)*2 }
        else b
 
-
-
-
-{-   in if (bx > blox - 25) && (bx < blox + 25) && (by == bloy - 25) then b { ver = (vx,-vy), bay = by - 1.0 }
-       else if (bx > blox - 25) && (bx < blox + 25) && (by == bloy + 25) then b { ver = (vx,-vy), bay = by + 1.0 }
-       else if (by > bloy - 25) && (by < bloy + 25) && (bx == blox - 25) then b { ver = (-vx,vy), bax = bx - 1.0 }
-       else if (by > bloy - 25) && (by < bloy + 25) && (bx == blox + 25) then b { ver = (-vx,vy), bax = bx + 1.0 }
-       else b
--}
 
 blocheck :: Blocks -> Float -> Float -> Int
 blocheck (blo:res) bx by =
@@ -222,7 +186,6 @@ blocheck (blo:res) bx by =
 	     bloy = bly blo
 	 in if (blox -25) <= bx && (blox + 25) >= bx && (bloy - 25) <= by && (bloy + 25) >= by then length res
 	 else blocheck res bx by
-
 
 
 tickHandler :: Float -> State -> State 
